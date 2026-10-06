@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#111114">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Grit 75</title>
+<style>
+:root{--bg:#f4f2ee;--card:#fff;--tx:#1b1b1a;--mut:#7a776f;--ac:#e8590c;--acs:#ffe8d9;--ok:#2f9e44;--bd:#e5e1d8}
+@media(prefers-color-scheme:dark){:root{--bg:#111114;--card:#1c1c21;--tx:#f1efe9;--mut:#9a98a0;--ac:#ff7a33;--acs:#3a2415;--ok:#51cf66;--bd:#2d2d34}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+.w{max-width:560px;margin:0 auto;padding:14px}
+.top{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:10px}
+h1{margin:0;font-size:22px}h1 span{color:var(--ac)}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:16px;padding:14px;margin-bottom:12px}
+.hero{text-align:center}.hero b{font-size:46px;color:var(--ac);line-height:1}.hero small{display:block;color:var(--mut)}
+.bar{height:8px;background:var(--bd);border-radius:6px;overflow:hidden;margin-top:10px}.bar i{display:block;height:100%;background:var(--ac);transition:width .3s}
+.t{display:flex;align-items:center;gap:12px;padding:12px 4px;border-bottom:1px solid var(--bd);cursor:pointer}.t:last-child{border:0}
+.ck{width:26px;height:26px;border-radius:8px;border:2px solid var(--bd);display:grid;place-items:center;flex:none;color:#fff}
+.t.d .ck{background:var(--ok);border-color:var(--ok)}.t.d .n{text-decoration:line-through;color:var(--mut)}
+.n small{display:block;color:var(--mut);font-size:12px}
+.row{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+button{font:inherit;background:var(--ac);color:#fff;border:0;border-radius:10px;padding:8px 12px;cursor:pointer}
+button.g{background:var(--acs);color:var(--ac)}
+input{font:inherit;color:var(--tx);background:var(--bg);border:1px solid var(--bd);border-radius:10px;padding:9px 11px;width:100%;margin-top:6px}
+.grid{display:grid;grid-template-columns:repeat(15,1fr);gap:3px}
+.g1{aspect-ratio:1;border-radius:4px;background:var(--bd)}.g1.ok{background:var(--ok)}.g1.cur{background:var(--ac)}
+#note{background:var(--acs);color:var(--ac);border-radius:12px;padding:10px 12px;margin-bottom:12px;display:none}
+.mut{color:var(--mut);font-size:12px}.ph img{width:56px;height:56px;object-fit:cover;border-radius:8px}
+</style>
+</head>
+<body>
+<div class="w">
+  <div class="top"><h1>GRIT <span>75</span></h1><div class="mut" id="sync">offline mode</div></div>
+  <div id="note"></div>
+  <div class="card hero"><small>DAY</small><b id="dn">1</b><small id="ds"></small><div class="bar"><i id="pb"></i></div></div>
+  <div class="card" id="tasks"></div>
+  <div class="card"><b>💧 Water</b> <span class="mut" id="wl"></span><div class="bar"><i id="wb"></i></div>
+    <div class="row"><button class="g" data-w="250">+250 ml</button><button class="g" data-w="500">+500 ml</button><button class="g" data-w="750">+750 ml</button><button class="g" data-w="-250">−250</button></div></div>
+  <div class="card"><b>📖 Reading</b> <span class="mut" id="rl"></span>
+    <div class="row"><button class="g" data-p="5">+5 pages</button><button class="g" data-p="10">+10 pages</button><button class="g" data-p="-5">−5</button></div></div>
+  <div class="card"><b>📷 Progress photo</b>
+    <div class="row"><input type="file" id="pf" accept="image/*" capture="environment" hidden><button class="g" id="pb2">Take / pick photo</button></div>
+    <div class="row ph" id="ph"></div></div>
+  <div class="card"><b>Your 75 days</b><div class="grid" id="gr" style="margin-top:8px"></div><p class="mut" id="stats"></p><button class="g" id="rs">Restart challenge</button></div>
+  <div class="card" id="acct"><b>☁ Sync across devices</b>
+    <div id="out"><input id="em" type="email" placeholder="Email" autocomplete="email"><input id="pw" type="password" placeholder="Password (6+ characters)" autocomplete="current-password">
+      <div class="row"><button id="si">Sign in</button><button class="g" id="su">Create account</button></div></div>
+    <div id="inn" style="display:none"><p class="mut" id="who"></p><div class="row"><button class="g" id="so">Sign out</button></div></div>
+    <p class="mut" id="amsg"></p></div>
+  <p class="mut" style="text-align:center">2×45 min workouts (one outdoors), diet with no cheats or alcohol, 3.8 L water, 10 pages non-fiction, 1 progress photo. Miss anything and it's back to Day 1.</p>
+</div>
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script>
+const $=id=>document.getElementById(id),pad=n=>String(n).padStart(2,"0");
+const key=d=>d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()),today=()=>key(new Date());
+const addDays=(k,n)=>{const d=new Date(k+"T00:00");d.setDate(d.getDate()+n);return key(d)};
+const diff=(a,b)=>Math.round((new Date(b+"T00:00")-new Date(a+"T00:00"))/864e5);
+const WATER=3800,PAGES=10;
+const TASKS=[["w1","Workout 1","45 minutes"],["w2","Workout 2 (outdoors)","45 minutes, outside"],["diet","Followed my diet","No cheat meals, no alcohol"]];
+let S={start:today(),days:{},hist:[],t:0},note="",thumbs={};
+try{const x=JSON.parse(localStorage.getItem("f75")||"null");if(x&&x.start)S=x}catch(e){}
+try{thumbs=JSON.parse(localStorage.getItem("f75p")||"{}")}catch(e){}
+const D=k=>S.days[k]||(S.days[k]={w1:0,w2:0,diet:0,water:0,pages:0,photo:0});
+const done=k=>{const d=S.days[k];return !!d&&d.w1&&d.w2&&d.diet&&d.water>=WATER&&d.pages>=PAGES&&d.photo};
+const dayNum=()=>diff(S.start,today())+1;
+
+/* ---- Supabase sync ---- */
+let sb=null,user=null,timer=null;
+const C=window.FORGE_CONFIG||{};
+if(window.supabase&&C.SUPABASE_URL&&!C.SUPABASE_URL.includes("YOUR-PROJECT")){
+  sb=window.supabase.createClient(C.SUPABASE_URL,C.SUPABASE_ANON_KEY);
+}
+function status(t){$("sync").textContent=t}
+async function push(){
+  if(!sb||!user)return;
+  const {error}=await sb.from("forge_state").upsert({user_id:user.id,data:S,updated_at:new Date().toISOString()});
+  status(error?"sync failed, saved on device":"☁ synced");
+}
+async function pull(){
+  if(!sb||!user)return;
+  const {data,error}=await sb.from("forge_state").select("data").eq("user_id",user.id).maybeSingle();
+  if(error){status("sync failed, saved on device");return}
+  if(data&&data.data&&data.data.start&&(data.data.t||0)>(S.t||0)){S=data.data;localStorage.setItem("f75",JSON.stringify(S))}
+  checkMiss();persist();render();status("☁ synced");
+}
+function persist(){
+  S.t=Date.now();
+  try{localStorage.setItem("f75",JSON.stringify(S))}catch(e){}
+  if(sb&&user){clearTimeout(timer);timer=setTimeout(push,700)}
+}
+function checkMiss(){
+  const t=today();
+  for(let k=S.start;k<t;k=addDays(k,1)){
+    if(!done(k)){
+      const r=Math.max(0,diff(S.start,k));S.hist.push({start:S.start,reached:r});
+      note="Day "+(r+1)+" wasn't completed, so you've restarted at Day 1. Previous run: "+r+" full day"+(r===1?"":"s")+".";
+      S.start=t;S.days={};return;
+    }
+  }
+}
+function render(){
+  const k=today(),d=D(k),n=dayNum();
+  $("dn").textContent=n;$("ds").textContent="of 75 · "+Math.max(0,n-1)+" complete";
+  const c=TASKS.filter(t=>d[t[0]]).length+(d.water>=WATER)+(d.pages>=PAGES)+(d.photo?1:0);
+  $("pb").style.width=(c/6*100)+"%";
+  $("tasks").innerHTML=TASKS.map(t=>`<div class="t${d[t[0]]?" d":""}" data-k="${t[0]}"><div class="ck">${d[t[0]]?"✓":""}</div><div class="n">${t[1]}<small>${t[2]}</small></div></div>`).join("");
+  $("tasks").querySelectorAll(".t").forEach(e=>e.onclick=()=>{d[e.dataset.k]=d[e.dataset.k]?0:1;persist();render()});
+  $("wl").textContent=(d.water/1000).toFixed(2)+" / 3.8 L";$("wb").style.width=Math.min(100,d.water/WATER*100)+"%";
+  $("rl").textContent=d.pages+" / 10 pages";
+  $("note").style.display=note?"block":"none";$("note").textContent=note;
+  $("ph").innerHTML=d.photo?(thumbs[k]?`<img src="${thumbs[k]}">`:'<span class="mut">Photo logged ✓</span>'):'<span class="mut">None yet today</span>';
+  let g="";for(let i=0;i<75;i++){const dk=addDays(S.start,i);g+=`<div class="g1${i<n-1&&done(dk)?" ok":""}${i===n-1?" cur":""}"></div>`}
+  $("gr").innerHTML=g;
+  $("stats").textContent="Best run: "+Math.max(0,n-1,...S.hist.map(h=>h.reached))+" days · Restarts: "+S.hist.length;
+}
+document.querySelectorAll("[data-w]").forEach(b=>b.onclick=()=>{const d=D(today());d.water=Math.max(0,d.water+ +b.dataset.w);persist();render()});
+document.querySelectorAll("[data-p]").forEach(b=>b.onclick=()=>{const d=D(today());d.pages=Math.max(0,d.pages+ +b.dataset.p);persist();render()});
+$("rs").onclick=()=>{if(confirm("Restart from Day 1?")){S.hist.push({start:S.start,reached:Math.max(0,dayNum()-1)});S.start=today();S.days={};note="";persist();render()}};
+$("pb2").onclick=()=>$("pf").click();
+$("pf").onchange=e=>{
+  const f=e.target.files[0];if(!f)return;
+  const im=new Image(),u=URL.createObjectURL(f);
+  im.onload=()=>{const c=document.createElement("canvas"),s=Math.min(1,160/Math.max(im.width,im.height));
+    c.width=im.width*s;c.height=im.height*s;c.getContext("2d").drawImage(im,0,0,c.width,c.height);
+    thumbs[today()]=c.toDataURL("image/jpeg",.6);try{localStorage.setItem("f75p",JSON.stringify(thumbs))}catch(x){}
+    D(today()).photo=1;URL.revokeObjectURL(u);persist();render()};
+  im.src=u;
+};
+
+/* ---- Account UI ---- */
+function acct(u){user=u;$("out").style.display=u?"none":"block";$("inn").style.display=u?"block":"none";$("who").textContent=u?"Signed in as "+u.email:""}
+async function auth(kind){
+  if(!sb){$("amsg").textContent="Sync isn't set up yet. Add your Supabase details in config.js.";return}
+  const r=kind==="in"?await sb.auth.signInWithPassword({email:$("em").value.trim(),password:$("pw").value}):await sb.auth.signUp({email:$("em").value.trim(),password:$("pw").value});
+  if(r.error){$("amsg").textContent=r.error.message;return}
+  $("amsg").textContent=kind==="up"&&!r.data.session?"Check your email to confirm, then sign in.":"";
+  if(r.data.session){acct(r.data.session.user);await pull()}
+}
+$("si").onclick=()=>auth("in");$("su").onclick=()=>auth("up");
+$("so").onclick=async()=>{await sb.auth.signOut();acct(null);status("offline mode")};
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)pull()});
+(async()=>{
+  checkMiss();persist();render();
+  if(!sb)return;
+  const {data}=await sb.auth.getSession();
+  if(data.session){acct(data.session.user);await pull()}
+})();
+if("serviceWorker"in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
+</script>
+</body>
+</html>
